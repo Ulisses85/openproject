@@ -44,6 +44,10 @@ module API
             type.is_milestone?
           end
 
+          def new_record?
+            true
+          end
+
           def available_custom_fields
             project.all_work_package_custom_fields.to_a & type.custom_fields.to_a
           end

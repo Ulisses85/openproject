@@ -35,6 +35,8 @@ module API
     module WorkPackages
       module Schema
         class WorkPackageSchemaRepresenter < ::API::Decorators::SchemaRepresenter
+          include API::Caching::CachedRepresenter
+
           class << self
             def represented_class
               WorkPackage
@@ -89,13 +91,22 @@ module API
           end
 
           def cache_key
-            custom_fields = represented.project.all_work_package_custom_fields
+            parts = if represented.new_record?
+                      [srand]
+                    else
+                      ['api/v3/work_packages/schemas',
+                       project_type_cache_key,
+                       I18n.locale,
+                       represented.type,
+                       custom_field_cache_key]
+                    end
 
-            OpenProject::Cache::CacheKey.key('api/v3/work_packages/schemas',
-                                             "#{represented.project.id}-#{represented.type.id}",
-                                             I18n.locale,
-                                             represented.type.updated_at,
-                                             OpenProject::Cache::CacheKey.expand(custom_fields))
+            OpenProject::Cache::CacheKey.key(parts)
+          end
+
+          # TODO: refactor to properly harmonize with API::Caching::CachedRepresenter
+          def json_cache_key
+            cache_key
           end
 
           link :baseSchema do
@@ -275,6 +286,20 @@ module API
             end
 
             @attribute_group_map[key]
+          end
+
+          private
+
+          def custom_field_cache_key
+            custom_fields = represented.project ? represented.project.all_work_package_custom_fields : []
+            OpenProject::Cache::CacheKey.expand(custom_fields)
+          end
+
+          def project_type_cache_key
+            project_cache_key = represented.project ? represented.project.id : nil
+            type_cache_key = represented.type ? represented.type.id : nil
+
+            "#{project_cache_key}-#{type_cache_key}"
           end
         end
       end

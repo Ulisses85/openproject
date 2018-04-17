@@ -44,6 +44,7 @@ module API
                    :id,
                    :milestone?,
                    :available_custom_fields,
+                   :new_record?,
                    to: :@work_package
 
           def assignable_values(property, current_user)
